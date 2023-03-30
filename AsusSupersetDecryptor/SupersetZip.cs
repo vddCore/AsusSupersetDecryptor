@@ -79,11 +79,6 @@ namespace AsusSupersetDecryptor
             {
                 using (var centralDirStream = DecryptZipCentralDirectory(encStream))
                 {
-                    var debug = new FileStream("debug.dec", FileMode.Create);
-                    centralDirStream.CopyTo(debug);
-                    debug.Dispose();
-
-                    centralDirStream.Seek(0, SeekOrigin.Begin);
                     centralDirStream.CopyTo(outStream);
                 }
                 
@@ -94,15 +89,11 @@ namespace AsusSupersetDecryptor
             }
         }
 
-        private MemoryStream DecryptZipCentralDirectory(Stream zipStream)
+        private MemoryStream DecryptZipCentralDirectory(Stream encStream)
         {
             if (!LoadRsaDecryptionKey(out var hprov, out var hcryptkey))
                 throw new InvalidOperationException("Unable to load RSA key for whatever reason.");
 
-            using var encStream = new MemoryStream();
-            zipStream.CopyTo(encStream);
-            encStream.Seek(0, SeekOrigin.Begin);
-            
             var ms = new MemoryStream();
             var bytes = new byte[256];
             
