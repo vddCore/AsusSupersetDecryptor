@@ -91,8 +91,8 @@ namespace AsusSupersetDecryptor
 
         private MemoryStream DecryptZipCentralDirectory(Stream encStream)
         {
-            if (!LoadRsaDecryptionKey(out var hprov, out var hcryptkey))
-                throw new InvalidOperationException("Unable to load RSA key for whatever reason.");
+            if (!InitializeDecryptionContext(out var hprov, out var hcryptkey))
+                throw new InvalidOperationException("Unable to initialize decryption context for whatever reason.");
 
             var ms = new MemoryStream();
             var bytes = new byte[256];
@@ -126,7 +126,7 @@ namespace AsusSupersetDecryptor
             return ms;
         }
 
-        private bool LoadRsaDecryptionKey(out AdvApi32.SafeHCRYPTPROV hprov, out Crypt32.HCRYPTKEY key)
+        private bool InitializeDecryptionContext(out AdvApi32.SafeHCRYPTPROV hprov, out Crypt32.HCRYPTKEY key)
         {
             var ret = false;
             key = Crypt32.HCRYPTKEY.NULL;
