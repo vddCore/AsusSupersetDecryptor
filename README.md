@@ -4,6 +4,7 @@ You might thing I have a personal vendetta against ASUS.
 
 ## Scheme details
 To package the data in the way ASUS do:
+
 0. Split a regular ZIP file into two at the point where ZIP central directory ends.
 1. Calculate a checksum for that data (no clue what that checksum might be, maybe CRC32), add 4 last bytes to the central directory section.
 2. Encrypt the central directory section using whatever RSA public key ASUS use. I don't give a shit what it might be.
