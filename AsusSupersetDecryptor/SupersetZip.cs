@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using Vanara.PInvoke;
@@ -72,7 +72,7 @@ namespace AsusSupersetDecryptor
                 throw new FormatException("Invalid ASUS ZIP file.");
             }
         }
-
+        
         public void ReconstructZipFile(Stream outStream)
         {
             using (var encStream = _encEntry.Open())
@@ -88,43 +88,51 @@ namespace AsusSupersetDecryptor
                 zipDataStream.CopyTo(outStream);
             }
         }
-
+        // I changed this because of 
         private MemoryStream DecryptZipCentralDirectory(Stream encStream)
         {
             if (!InitializeDecryptionContext(out var hprov, out var hcryptkey))
                 throw new InvalidOperationException("Unable to initialize decryption context for whatever reason.");
 
-            var ms = new MemoryStream();
-            var bytes = new byte[256];
-            
-            while (encStream.Position < encStream.Length)
+            using (var memoryStream = new MemoryStream())
             {
-                var actualCount = encStream.Read(bytes);
-                var final = encStream.Position >= encStream.Length;
-                
-                if (!AdvApi32.CryptDecrypt(
-                        hcryptkey,
-                        Crypt32.HCRYPTHASH.NULL,
-                        final,
-                        0,
-                        bytes,
-                        ref actualCount
-                    ))
+                encStream.CopyTo(memoryStream);
+                memoryStream.Seek(0, SeekOrigin.Begin);
+
+                var ms = new MemoryStream();
+                var bytes = new byte[256];
+
+                while (memoryStream.Position < memoryStream.Length)
                 {
-                    throw new InvalidOperationException("Decryption failed for whatever reason.");
+                    var actualCount = memoryStream.Read(bytes);
+                    var final = memoryStream.Position >= memoryStream.Length;
+
+                    if (!AdvApi32.CryptDecrypt(
+                            hcryptkey,
+                            Crypt32.HCRYPTHASH.NULL,
+                            final,
+                            0,
+                            bytes,
+                            ref actualCount
+                        ))
+                    {
+                        throw new InvalidOperationException("Decryption failed for whatever reason.");
+                    }
+
+                    ms.Write(bytes, 0, actualCount);
                 }
 
-                ms.Write(bytes[0..actualCount]);
-            }
+                ms.Seek(0, SeekOrigin.Begin);
+                ms.SetLength(ms.Length - 4); // We don't care about the 4-byte checksum at the end.
 
-            ms.Seek(0, SeekOrigin.Begin);
-            ms.SetLength(ms.Length - 4); // We don't give a single flying fuck about the 4-byte checksum at the end.
-            
-            AdvApi32.CryptReleaseContext(hprov);
-            AdvApi32.CryptDestroyKey(hcryptkey);
-            
-            return ms;
+                AdvApi32.CryptReleaseContext(hprov);
+                AdvApi32.CryptDestroyKey(hcryptkey);
+
+                return ms;
+            }
         }
+
+
 
         private bool InitializeDecryptionContext(out AdvApi32.SafeHCRYPTPROV hprov, out Crypt32.HCRYPTKEY key)
         {
